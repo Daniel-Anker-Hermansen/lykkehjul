@@ -25,7 +25,7 @@ fn print_string(font: &Font, canvas: &mut Canvas, string: &str, radius: f32, the
         vec.push((id, offset));
         offset += (advance.x() / upem as f32) * 32.0;
     }
-    let start = radius - offset;
+    let start = radius - offset - 5.0;
     for (id, offset) in vec {
         print_char(font, canvas, id, start + offset, 540.0, theta);
     }
@@ -36,13 +36,36 @@ fn print_char(font: &Font, canvas: &mut Canvas, id: u32, offset: f32, radius: f3
     let x = theta.sin() * 32.0 / 3.0;
     let z = theta.cos() * offset;
     let w = theta.sin() * offset;
-    font.rasterize_glyph(canvas, 
+    let mut local_canvas = Canvas::new(Vector2I::new(1080, 1080), Format::A8);
+    let offset_y = radius + y - w;
+    let offset_x = radius + x + z;
+    font.rasterize_glyph(&mut local_canvas, 
         id, 
         32.0,
-        Transform2F::from_rotation(theta).translate(Vector2F::new(radius + x + z, radius + y - w)),
+        Transform2F::from_rotation(theta).translate(Vector2F::new(offset_x, offset_y)),
         HintingOptions::None, 
         RasterizationOptions::Bilevel)
         .unwrap();
+    let offset_y = offset_y as usize;
+    let offset_x = offset_x as usize;
+    let start_y = match offset_y < 32 {
+        true => 0,
+        false => offset_y - 32
+    };
+    let start_x = match offset_x < 32 {
+        true => 0,
+        false => offset_x - 32
+    };
+    let end_y = 1080.min(offset_y + 32);
+    let end_x = 1080.min(offset_x + 32);
+    for y in start_y..end_y {
+        for x in start_x..end_x {
+            let idx = y * 1080 + x;
+            if local_canvas.pixels[idx] > 0 {
+                canvas.pixels[idx] = 255;
+            }
+        }
+    }
 }
 
 pub fn load_font() -> Font {
