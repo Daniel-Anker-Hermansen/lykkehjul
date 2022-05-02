@@ -97,7 +97,7 @@ impl Wheel {
             }), Some((1.0, 1.0, 1.0, 0.0)), false, None, None);
         }
         let width2 = width;
-        let (text, width) = super::text::test(vec, &self.font);
+        let (text, width) = super::text::test(vec, &self.font, height as i32 / 2);
         let height = text.len() / width;
         for y in 0..height {
             for x in 0..width {

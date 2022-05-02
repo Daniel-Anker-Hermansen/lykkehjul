@@ -7,10 +7,10 @@ use font_kit::source::SystemSource;
 use pathfinder_geometry::transform2d::Transform2F;
 use pathfinder_geometry::vector::{Vector2F, Vector2I};
 
-pub fn test(data: Vec<(&String, f32)>, font: &Font) -> (Vec<u8>, usize) {
-    let mut canvas = Canvas::new(Vector2I::new(1080, 1080), Format::A8);
+pub fn test(data: Vec<(&String, f32)>, font: &Font, radius: i32) -> (Vec<u8>, usize) {
+    let mut canvas = Canvas::new(Vector2I::splat(radius * 2), Format::A8);
     for (str, theta) in data {
-        print_string(font, &mut canvas, str, 540.0, theta);
+        print_string(font, &mut canvas, str, radius as f32, theta);
     }
     (canvas.pixels, canvas.stride)
 }
@@ -27,7 +27,7 @@ fn print_string(font: &Font, canvas: &mut Canvas, string: &str, radius: f32, the
     }
     let start = radius - offset - 5.0;
     for (id, offset) in vec {
-        print_char(font, canvas, id, start + offset, 540.0, theta);
+        print_char(font, canvas, id, start + offset, radius, theta);
     }
 }
 
@@ -36,7 +36,8 @@ fn print_char(font: &Font, canvas: &mut Canvas, id: u32, offset: f32, radius: f3
     let x = theta.sin() * 32.0 / 3.0;
     let z = theta.cos() * offset;
     let w = theta.sin() * offset;
-    let mut local_canvas = Canvas::new(Vector2I::new(1080, 1080), Format::A8);
+    let diameter = radius as usize * 2;
+    let mut local_canvas = Canvas::new(Vector2I::splat(diameter as i32), Format::A8);
     let offset_y = radius + y - w;
     let offset_x = radius + x + z;
     font.rasterize_glyph(&mut local_canvas, 
@@ -56,11 +57,11 @@ fn print_char(font: &Font, canvas: &mut Canvas, id: u32, offset: f32, radius: f3
         true => 0,
         false => offset_x - 32
     };
-    let end_y = 1080.min(offset_y + 32);
-    let end_x = 1080.min(offset_x + 32);
+    let end_y = diameter.min(offset_y + 32);
+    let end_x = diameter.min(offset_x + 32);
     for y in start_y..end_y {
         for x in start_x..end_x {
-            let idx = y * 1080 + x;
+            let idx = y * diameter + x;
             if local_canvas.pixels[idx] > 0 {
                 canvas.pixels[idx] = 255;
             }
