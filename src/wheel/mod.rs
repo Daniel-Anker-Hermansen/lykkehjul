@@ -1,14 +1,14 @@
 use font_kit::font::Font;
 use glium::{Display, Surface, glutin::{ContextWrapper, ContextCurrentState, window::Window}, Rect, implement_vertex};
 use rand::Rng;
-use std::{f32::consts::PI, sync::{Mutex, Arc}, time::Instant};
+use std::{f32::consts::PI, sync::{Mutex, Arc}, time::{Duration, Instant}};
 
 use super::{DisplayEvent, Controller};
 
 mod pie;
 
 struct Wheel {
-    pies: Vec<(String, Color, f32, f32)>,
+    pies: Arc<Mutex<Vec<(String, Color, f32, f32)>>>,
     display: Display,
     font: Font
 }
@@ -29,7 +29,7 @@ impl Wheel {
         let mut acc1 = 0;
         let mut rng = rand::thread_rng();
         let wheel = Wheel {
-            pies: people.iter().map(|(name, weight)|{
+            pies: Arc::new(Mutex::new(people.iter().map(|(name, weight)|{
                 let angle = *weight as f32 / aggr as f32;
                 let phi1 = acc;
                 acc += angle * 2.0 * PI;
@@ -39,7 +39,7 @@ impl Wheel {
                     phi2 = 0.0;
                 }
                 (name.to_string(), (rng.gen(), rng.gen(), rng.gen(), 0.0), phi1, phi2)
-            }).collect::<Vec<_>>(),
+            }).collect::<Vec<_>>())),
             display,
             font: super::text::load_font()
         };
@@ -48,26 +48,46 @@ impl Wheel {
     }
 
     fn spin(self: &mut Self) {
-        let mut speed = 5.0;
-        let time = (rand::thread_rng().gen::<f32>() * 1000.0) as u128;
-        let now = Instant::now();
-        loop {
-            self.pies = self.pies.clone().into_iter().map(|(name, color, phi1, phi2)|
+        let running_mutex = Arc::new(Mutex::new(true));
+        let thread_running_mutex = running_mutex.clone();
+        let mutex = self.pies.clone();
+        std::thread::spawn(move ||{
+            let rng = (rand::random::<f32>() * 1000.0) as u128;
+            let begin = Instant::now();
+            let mut speed = 5.0;
+            loop {
+                let time = Instant::now();
+                let mut guard = mutex.lock().unwrap();
+                *guard = (*guard).clone().into_iter().map(|(name, color, phi1, phi2)|
                     (name, 
                         color, 
-                        (phi1 - PI / (30.0 / speed) + 2.0 * PI) % (2.0 * PI),
-                        (phi2 - PI / (30.0 / speed) + 2.0 * PI) % (2.0 * PI)))
+                        (phi1 - PI / (60.0 / speed) + 2.0 * PI) % (2.0 * PI),
+                        (phi2 - PI / (60.0 / speed) + 2.0 * PI) % (2.0 * PI)))
                 .collect::<Vec<_>>();
-            self.draw();
-            if now.elapsed().as_millis() > time {
-                speed -= 0.017;
+                drop(guard);
+                if begin.elapsed().as_millis() > rng {
+                    speed -= 0.008;
+                }
+                if speed <= 0.0 {
+                    break;  
+                }
+                let wait = Duration::new(1, 0) / 120 - time.elapsed();
+                std::thread::sleep(wait);
             }
-            if speed < 0.0 {
+            let mut guard = thread_running_mutex.lock().unwrap();
+            *guard = false;
+        });
+        loop {
+            self.draw();
+            let guard = running_mutex.lock().unwrap();
+            if !*guard {
                 break;
             }
-            std::thread::sleep(std::time::Duration::new(1, 0) / 60);
         }
-        let winner = &self.pies.iter().find(|(_, _, phi1, phi2)| phi2 >= &0.0 && phi1 > phi2).unwrap().0;
+        let guard = self.pies.lock().unwrap();
+        let data = (*guard).clone();
+        drop(guard);
+        let winner = &data.iter().find(|(_, _, phi1, phi2)| phi2 >= &0.0 && phi1 > phi2).unwrap().0;
         println!("{}", winner);
     }
 
@@ -77,10 +97,13 @@ impl Wheel {
         let width = physical_size.width;
         let height = physical_size.height;
         frame.clear_color(0.0, 0.0, 0.0, 0.0);
-        for (_, color, phi1, phi2) in &self.pies {
+        let guard = self.pies.lock().unwrap();
+        let data = (*guard).clone();
+        drop(guard);
+        for (_, color, phi1, phi2) in &data {
             pie::draw_pie_to_frame(&mut frame, height / 2, Some(*color), width / 2, height / 2, (*phi1, *phi2));
         }
-        let vec = self.pies.iter().map(|(name, _, phi1, phi2)|{
+        let vec = data.iter().map(|(name, _, phi1, phi2)|{
             if phi2 < phi1 {
                 return (name, (phi1 + phi2) / 2.0 + PI);
             }
