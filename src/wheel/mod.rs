@@ -139,6 +139,10 @@ impl Wheel {
         }
         frame.finish().expect("I did bad code");
     }
+
+    fn toggle_fullscreen(&self) {
+        self.display.gl_window().window().set_fullscreen(None);
+    }
 }
 
 pub fn new_wheel<T: ContextCurrentState>(people: &[(String, u64)], windowed_context: ContextWrapper<T, Window>, controller: Arc<Mutex<Controller>>) {
@@ -153,6 +157,10 @@ pub fn new_wheel<T: ContextCurrentState>(people: &[(String, u64)], windowed_cont
                 wheel.spin();
                 let mut controller_guard = controller.lock().unwrap();
                 controller_guard.display_events.pop();
+            }
+            Some(DisplayEvent::ToggleFullscreen) => {
+                drop(controller_guard);
+                wheel.toggle_fullscreen();
             }
             None => ()
         };

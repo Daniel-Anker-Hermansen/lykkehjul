@@ -1,4 +1,4 @@
-use glium::{glutin::{self, event_loop::{EventLoop, EventLoopWindowTarget, ControlFlow}, window::{WindowBuilder, Fullscreen}, dpi::LogicalSize, event::{Event, DeviceEvent, ElementState, WindowEvent, KeyboardInput, VirtualKeyCode}}};
+use glium::{glutin::{self, event_loop::{EventLoop, EventLoopWindowTarget, ControlFlow}, window::{WindowBuilder, Fullscreen}, dpi::LogicalSize, event::{Event, DeviceEvent, ElementState, WindowEvent, KeyboardInput, VirtualKeyCode}, platform::windows::EventLoopExtWindows}};
 
 use std::sync::{Arc, Mutex};
 
@@ -18,11 +18,12 @@ impl Controller {
 
 #[derive(Debug, PartialEq)]
 enum DisplayEvent {
-    Spin
+    Spin,
+    ToggleFullscreen,
 }
 
 pub fn run(data: Vec<(String, u64)>) {
-    let events_loop = EventLoop::new();
+    let events_loop = EventLoop::<()>::new_any_thread();
     let wb = WindowBuilder::new()
         .with_inner_size(LogicalSize::new(1920,1080))
         .with_fullscreen(Some(Fullscreen::Borderless(None)))
@@ -49,6 +50,10 @@ fn event_handler<T: std::fmt::Debug>(controller: Arc<Mutex<Controller>>) -> Box<
             }
             DeviceEvent::Key(KeyboardInput{virtual_keycode, ..}) => match virtual_keycode {
                 Some(VirtualKeyCode::Escape) => *control = ControlFlow::Exit,
+                Some(VirtualKeyCode::F11) => {
+                    let mut controller_guard = controller.lock().unwrap();
+                    controller_guard.display_events.push(DisplayEvent::ToggleFullscreen);
+                }
                 _ => ()
             },
             _ => ()
