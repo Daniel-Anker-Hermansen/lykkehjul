@@ -101,24 +101,15 @@ impl Wheel {
         let data = (*guard).clone();
         drop(guard);
         for (_, color, phi1, phi2) in &data {
-            pie::draw_pie_to_frame(&mut frame, height / 2, Some(*color), width / 2, height / 2, (*phi1, *phi2));
+            pie::draw_pie_to_frame(&self.display, &mut frame, height / 2, *color, (*phi1, *phi2));
         }
         let vec = data.iter().map(|(name, _, phi1, phi2)|{
             if phi2 < phi1 {
                 return (name, (phi1 + phi2) / 2.0 + PI);
             }
             (name,(phi1 + phi2) / 2.0)}).collect();
-        let size: i64 = height as i64 / 20;
-        for y in 1 - size..=size - 1 {
-            let abs = y.abs();
-            let line_width = size - abs;
-            frame.clear(Some(&Rect {
-                left: ((width + height) as i64 / 2 + 1 + abs) as u32,
-                bottom: (height as i64 / 2 + y) as u32,
-                width: line_width as u32,
-                height: 1,
-            }), Some((1.0, 1.0, 1.0, 0.0)), false, None, None);
-        }
+        let size = height / 20;
+        pie::draw_triangle(&self.display, &mut frame, size, height / 2);
         let width2 = width;
         let (text, width) = super::text::test(vec, &self.font, height as i32 / 2);
         let height = text.len() / width;

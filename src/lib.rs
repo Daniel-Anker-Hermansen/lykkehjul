@@ -63,3 +63,9 @@ fn event_handler<T: std::fmt::Debug>(controller: Arc<Mutex<Controller>>) -> Box<
         };
     })
 }
+
+#[test]
+fn test() {
+    run(vec![("Hi, mom!".into(), 4), ("Hello, world!".into(), 1)]);
+    //run(vec![("".into(), 4), ("".into(), 1)]);
+}
