@@ -1,16 +1,18 @@
 use font_kit::font::Font;
-use glium::{Display, Surface, glutin::{ContextWrapper, ContextCurrentState, window::Window}, Rect, implement_vertex};
+use glium::{Display, Surface, glutin::{ContextWrapper, ContextCurrentState, window::Window}, Rect, implement_vertex, Program};
 use rand::Rng;
 use std::{f32::consts::PI, sync::{Mutex, Arc}, time::{Duration, Instant}};
 
 use super::{DisplayEvent, Controller};
 
 mod pie;
+mod programs;
 
 struct Wheel {
     pies: Arc<Mutex<Vec<(String, Color, f32, f32)>>>,
     display: Display,
-    font: Font
+    font: Font,
+    pie_program: Program,
 }
 
 #[derive(Copy, Clone)]
@@ -28,6 +30,7 @@ impl Wheel {
         let mut acc = 0.0;
         let mut acc1 = 0;
         let mut rng = rand::thread_rng();
+        let pie_program = programs::pie_program(&display);
         let wheel = Wheel {
             pies: Arc::new(Mutex::new(people.iter().map(|(name, weight)|{
                 let angle = *weight as f32 / aggr as f32;
@@ -41,7 +44,8 @@ impl Wheel {
                 (name.to_string(), (rng.gen(), rng.gen(), rng.gen(), 0.0), phi1, phi2)
             }).collect::<Vec<_>>())),
             display,
-            font: super::text::load_font()
+            font: super::text::load_font(),
+            pie_program,
         };
         wheel.draw();
         wheel
@@ -91,7 +95,7 @@ impl Wheel {
         println!("{}", winner);
     }
 
-    fn draw(self: &Self) {
+    fn draw(&self) {
         let mut frame = self.display.draw();
         let physical_size = self.display.gl_window().window().inner_size();
         let width = physical_size.width;
@@ -101,7 +105,7 @@ impl Wheel {
         let data = (*guard).clone();
         drop(guard);
         for (_, color, phi1, phi2) in &data {
-            pie::draw_pie_to_frame(&self.display, &mut frame, height / 2, *color, (*phi1, *phi2));
+            pie::draw_pie_to_frame(&self.pie_program, &self.display, &mut frame, height / 2, *color, (*phi1, *phi2));
         }
         let vec = data.iter().map(|(name, _, phi1, phi2)|{
             if phi2 < phi1 {
@@ -109,7 +113,7 @@ impl Wheel {
             }
             (name,(phi1 + phi2) / 2.0)}).collect();
         let size = height / 20;
-        pie::draw_triangle(&self.display, &mut frame, size, height / 2);
+        pie::draw_triangle(&self.pie_program, &self.display, &mut frame, size, height / 2);
         let width2 = width;
         let (text, width) = super::text::test(vec, &self.font, height as i32 / 2);
         let height = text.len() / width;

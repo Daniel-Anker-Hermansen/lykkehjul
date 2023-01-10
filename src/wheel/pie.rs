@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use glium::{implement_vertex, Frame, Surface, Display};
+use glium::{implement_vertex, Frame, Surface, Display, Program, uniform};
 
 #[derive(Copy, Clone, Debug)]
 struct Vertex {
@@ -13,28 +13,7 @@ implement_vertex!(Vertex, position);
 const WIDTH: usize = 1920 / 2;
 const HEIGHT: usize = 1080 / 2;
 
-pub fn draw_pie_to_frame(display: &Display, frame: &mut Frame, radius: u32, color: (f32, f32, f32, f32), mut cut: (f32, f32)) {
-    let vertex_shader_src = r#"
-        #version 140
-
-        in vec2 position;
-
-        void main() {
-            gl_Position = vec4(position, 0.0, 1.0);
-        }
-    "#;
-
-    let fragment_shader_src = &format!(r#"
-        #version 140
-
-        out vec4 color;
-
-        void main() {{
-            color = vec4({}, {}, {}, {});
-        }}
-    "#, color.0, color.1, color.2, color.3);
-
-    let program = glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap();
+pub fn draw_pie_to_frame(program: &Program, display: &Display, frame: &mut Frame, radius: u32, color: (f32, f32, f32, f32), mut cut: (f32, f32)) {
     if cut.1 < cut.0 {
         cut.1 += 2.0 * PI;
     }
@@ -56,32 +35,10 @@ pub fn draw_pie_to_frame(display: &Display, frame: &mut Frame, radius: u32, colo
     let vertex_buffer = glium::VertexBuffer::new(display, &vertices).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
-    frame.draw(&vertex_buffer, &indices, &program, &glium::uniforms::EmptyUniforms,
-        &Default::default()).unwrap();
+    frame.draw(&vertex_buffer, &indices, &program, &uniform! { color2: color} ,&Default::default()).unwrap();
 }
 
-pub fn draw_triangle(display: &Display, frame: &mut Frame, size: u32, radius: u32) {
-    let vertex_shader_src = r#"
-        #version 140
-
-        in vec2 position;
-
-        void main() {
-            gl_Position = vec4(position, 0.0, 1.0);
-        }
-    "#;
-
-    let fragment_shader_src = &format!(r#"
-        #version 140
-
-        out vec4 color;
-
-        void main() {{
-            color = vec4({}, {}, {}, {});
-        }}
-    "#, 1.0, 1.0, 1.0, 1.0);
-
-    let program = glium::Program::from_source(display, vertex_shader_src, fragment_shader_src, None).unwrap();
+pub fn draw_triangle(program: &Program, display: &Display, frame: &mut Frame, size: u32, radius: u32) {
     let left = radius + 1;
 
     let v1 = Vertex{ position: [left as f32 / WIDTH as f32, 0.0] };
@@ -91,7 +48,6 @@ pub fn draw_triangle(display: &Display, frame: &mut Frame, size: u32, radius: u3
     let vertex_buffer = glium::VertexBuffer::new(display, &vertices).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
-    frame.draw(&vertex_buffer, &indices, &program, &glium::uniforms::EmptyUniforms,
-        &Default::default()).unwrap();
+    frame.draw(&vertex_buffer, &indices, &program, &uniform! { color2: (1.0f32, 1.0f32, 1.0f32, 0.0f32)}, &Default::default()).unwrap();
 
 }
