@@ -49,14 +49,8 @@ fn print_char(font: &Font, canvas: &mut Canvas, id: u32, offset: f32, radius: f3
         .unwrap();
     let offset_y = offset_y as usize;
     let offset_x = offset_x as usize;
-    let start_y = match offset_y < 32 {
-        true => 0,
-        false => offset_y - 32
-    };
-    let start_x = match offset_x < 32 {
-        true => 0,
-        false => offset_x - 32
-    };
+    let start_y = offset_y.saturating_sub(32);
+    let start_x = offset_x.saturating_sub(32);
     let end_y = diameter.min(offset_y + 32);
     let end_x = diameter.min(offset_x + 32);
     for y in start_y..end_y {
