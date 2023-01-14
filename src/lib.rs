@@ -39,7 +39,6 @@ pub fn run(data: Vec<(String, u64)>) {
 
 fn event_handler<T: std::fmt::Debug>(controller: Arc<Mutex<Controller>>) -> Box<dyn FnMut(Event<'_, T>, &EventLoopWindowTarget<T>, &mut ControlFlow) -> ()> {
     Box::new(move |event: Event<'_, _>, _event_loop: &EventLoopWindowTarget<_>, control: &mut ControlFlow|{
-        println!("{event:?}");
         *control = ControlFlow::Wait;
         match event {
         Event::DeviceEvent { device_id: _, event: e } => match e {
