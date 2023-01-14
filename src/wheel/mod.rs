@@ -41,7 +41,7 @@ impl Wheel {
                 if acc1 == aggr {
                     phi2 = 0.0;
                 }
-                (name.to_string(), (rng.gen(), rng.gen(), rng.gen(), 0.0), phi1, phi2)
+                (name.to_string(), (rng.gen(), rng.gen(), rng.gen(), 1.0), phi1, phi2)
             }).collect::<Vec<_>>())),
             display,
             font: super::text::load_font(),
@@ -100,7 +100,7 @@ impl Wheel {
         let physical_size = self.display.gl_window().window().inner_size();
         let width = physical_size.width;
         let height = physical_size.height;
-        frame.clear_color(0.0, 0.0, 0.0, 0.0);
+        frame.clear_color(0.0, 0.0, 0.0, 1.0);
         let guard = self.pies.lock().unwrap();
         let data = (*guard).clone();
         drop(guard);
@@ -129,7 +129,7 @@ impl Wheel {
                     bottom: (height - y) as u32,
                     width: 1,
                     height: 1,
-                }), Some((greyscale, greyscale, greyscale, 0.0)), false, None, None);
+                }), Some((greyscale, greyscale, greyscale, 1.0)), false, None, None);
             }
         }
         frame.finish().expect("I did bad code");

@@ -1,4 +1,4 @@
-use glium::{glutin::{self, event_loop::{EventLoop, EventLoopWindowTarget, ControlFlow}, window::{WindowBuilder, Fullscreen}, dpi::LogicalSize, event::{Event, DeviceEvent, ElementState, WindowEvent, KeyboardInput, VirtualKeyCode}, platform::windows::EventLoopExtWindows}};
+use glium::{glutin::{self, event_loop::{EventLoop, EventLoopWindowTarget, ControlFlow}, window::{WindowBuilder, Fullscreen}, dpi::LogicalSize, event::{Event, DeviceEvent, ElementState, WindowEvent, KeyboardInput, VirtualKeyCode, MouseButton}}};
 
 use std::sync::{Arc, Mutex};
 
@@ -23,7 +23,7 @@ enum DisplayEvent {
 }
 
 pub fn run(data: Vec<(String, u64)>) {
-    let events_loop = EventLoop::<()>::new_any_thread();
+    let events_loop = EventLoop::<()>::new();
     let wb = WindowBuilder::new()
         .with_inner_size(LogicalSize::new(1920,1080))
         .with_fullscreen(Some(Fullscreen::Borderless(None)))
@@ -39,6 +39,7 @@ pub fn run(data: Vec<(String, u64)>) {
 
 fn event_handler<T: std::fmt::Debug>(controller: Arc<Mutex<Controller>>) -> Box<dyn FnMut(Event<'_, T>, &EventLoopWindowTarget<T>, &mut ControlFlow) -> ()> {
     Box::new(move |event: Event<'_, _>, _event_loop: &EventLoopWindowTarget<_>, control: &mut ControlFlow|{
+        println!("{event:?}");
         *control = ControlFlow::Wait;
         match event {
         Event::DeviceEvent { device_id: _, event: e } => match e {
@@ -59,13 +60,23 @@ fn event_handler<T: std::fmt::Debug>(controller: Arc<Mutex<Controller>>) -> Box<
             _ => ()
         }
         Event::WindowEvent { window_id: _, event: WindowEvent::CloseRequested } => std::process::exit(0),
+        Event::WindowEvent { window_id: _, event: WindowEvent::MouseInput { device_id: _, state: ElementState::Released, button: MouseButton::Left, .. } } => {
+            let mut controller_guard = controller.lock().unwrap();
+            if !controller_guard.display_events.contains(&DisplayEvent::Spin) {
+                controller_guard.display_events.push(DisplayEvent::Spin);
+            }            
+        },
+        Event::WindowEvent { window_id: _, event: WindowEvent::KeyboardInput { device_id: _, input: KeyboardInput{virtual_keycode, ..}, is_synthetic: _ } } => {
+            match virtual_keycode {
+                Some(VirtualKeyCode::Escape) => *control = ControlFlow::Exit,
+                Some(VirtualKeyCode::F11) => {
+                    let mut controller_guard = controller.lock().unwrap();
+                    controller_guard.display_events.push(DisplayEvent::ToggleFullscreen);
+                }
+                _ => ()
+            }
+        }
         _ => ()
         };
     })
-}
-
-#[test]
-fn test() {
-    run(vec![("Hi, mom!".into(), 4), ("Hello, world!".into(), 1)]);
-    //run(vec![("".into(), 4), ("".into(), 1)]);
 }
